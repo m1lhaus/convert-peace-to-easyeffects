@@ -25,6 +25,7 @@ The generated .json files can be placed directly in:
 import argparse
 import configparser
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -72,11 +73,11 @@ PEACE_CODE_TO_EE: dict[int, str] = {
     0:  "Bell",        # PK   – Peak
     1:  "Lo-pass",     # LPQ  – Low-pass with Q
     2:  "Hi-pass",     # HPQ  – High-pass with Q
-    3:  "Band-pass",   # BP   – Band-pass
+    3:  "Bandpass",    # BP   – Band-pass
     4:  "Lo-shelf",    # LS   – Low Shelf (no Q in APO, default S=0.9)
     5:  "Hi-shelf",    # HS   – High Shelf (no Q in APO, default S=0.9)
     6:  "Notch",       # NO   – Notch
-    7:  "All-pass",    # AP   – All-pass
+    7:  "Allpass",     # AP   – All-pass
     8:  "Lo-shelf",    # LSC  – Low Shelf, slope-mode, isCornerFreq=false
     9:  "Hi-shelf",    # HSC  – High Shelf, slope-mode, isCornerFreq=false
     10: "Lo-pass",     # BWLP – Butterworth LP (cascaded; single-band approx)
@@ -91,13 +92,19 @@ PEACE_CODE_TO_EE: dict[int, str] = {
 
 # Filter types that do not use gain in EqualizerAPO; gain will be zeroed
 # in the EasyEffects output to avoid confusion.
-_PASS_TYPES = {"Lo-pass", "Hi-pass", "Band-pass", "Notch", "All-pass"}
+_PASS_TYPES = {"Lo-pass", "Hi-pass", "Bandpass", "Notch", "Allpass"}
 
 # Codes where [Qualities] stores the slope in dB/oct (not biquad Q).
 # PEACE writes "ON LSC/HSC Slope dB Fc X Hz Gain Y dB" to the APO config.
-# EqualizerAPO: S = slope/12, isCornerFreq=false (stored freq is centre freq).
-# EasyEffects Lo/Hi-shelf APO(DR) interprets the Q field as S, so:
-#   JSON Q = peace_quality / 12
+# EqualizerAPO: effective_S = slope/12, S-mode, isCornerFreq=false.
+#
+# EasyEffects APO (DR) Lo/Hi-shelf uses biquad Q-mode (alpha = sn/(2*Q)),
+# not S-mode.  The equivalent biquad Q for a given effective_S is:
+#   Q = 1 / sqrt((A + 1/A) * (1/effective_S - 1) + 2)
+# which is gain-dependent.  However at effective_S = 1 (slope = 12 dB/oct)
+# the expression simplifies to Q = 1/sqrt(2) regardless of gain.
+# The 0-dB-gain approximation Q = sqrt(effective_S / 2) = sqrt(slope / 24)
+# is used here: it is exact at slope=12 and a good approximation otherwise.
 # No frequency adjustment is needed (isCornerFreq=false).
 _SLOPE_LSC_CODES = {8, 9}
 _SLOPE_LSC_NAMES = {8: "LSC", 9: "HSC"}
@@ -186,28 +193,55 @@ def parse_peace_file(path: Path) -> tuple[float, list[dict]]:
         if ee_type in _PASS_TYPES:
             gain = 0.0
 
+        # For LS/HS (codes 4/5): PEACE never writes Q to the APO config
+        # ([Qualities] stores whatever the slider last held, which is
+        # unrelated to the filter's actual response).  EqualizerAPO defaults
+        # to S = 0.9 (S-mode, centre frequency).  EasyEffects APO (DR)
+        # uses biquad Q-mode; the equivalent Q for S = 0.9 is 2/3, which
+        # also matches the value EasyEffects itself uses when importing bare
+        # LS/HS filter lines.  Always override with this value.
+        if code in {4, 5}:
+            q = 2.0 / 3.0
+
         # For LSC/HSC codes (8, 9): [Qualities] stores slope in dB/oct.
         # PEACE generates "ON LSC/HSC slope dB Fc X Hz Gain Y dB" for APO.
-        # EqualizerAPO: S = slope/12, isCornerFreq=false → stored freq is
-        # already the centre frequency, no adjustment needed.
-        # EasyEffects Lo/Hi-shelf APO(DR) uses Q as the S parameter, so:
-        #   JSON Q = slope / 12
+        # EqualizerAPO: effective_S = slope/12, S-mode, isCornerFreq=false.
+        # EasyEffects APO (DR) uses biquad Q-mode (alpha = sn/(2*Q)).
+        # Equivalent Q = sqrt(slope/24) = sqrt(effective_S/2).
+        # This is exact and gain-independent at slope=12 (effective_S=1),
+        # and the best 0-dB approximation at other slopes.
         if code in _SLOPE_LSC_CODES:
             orig_q = q
-            q = orig_q / 12.0
+            q = math.sqrt(orig_q / 24.0)
             slope_warnings.append(
                 f"  band at {freq:.1f} Hz: {_SLOPE_LSC_NAMES[code]} (code {code}), "
-                f"slope={orig_q:.4g} dB/oct → Q set to {q:.4f} (= slope/12). "
+                f"slope={orig_q:.4g} dB/oct → Q set to {q:.4f} (= sqrt(slope/24)). "
                 f"Frequency unchanged (isCornerFreq=false)."
             )
 
-        # Warn about codes that PEACE expands into multiple cascaded biquad
-        # lines — they cannot be represented as a single EasyEffects band.
+        # For Butterworth/LR cascaded types (codes 10-13): [Qualities] stores
+        # the filter ORDER (even integer ≥ 2), NOT a biquad Q.  PEACE writes
+        # n/2 cascaded biquad stages whose Q values are computed from the
+        # Butterworth pole formula: Q_k = 1/(-2*cos(π*(2k+n-1)/(2n))).
+        # For a single-band approximation the best fixed Q is the one that
+        # places the same characteristic attenuation at fc:
+        #
+        #   BWLP / BWHP  → -3 dB at fc  → Q = 1/sqrt(2) ≈ 0.7071
+        #   LRLP / LRHP  → -6 dB at fc  → Q = 0.5
+        #
+        # (For a 2nd-order biquad LP or HP, |H(jωc)| = Q, so setting Q to
+        # the desired attenuation at fc gives the correct crossover level.)
         if code in _CASCADED_FILTER_CODES:
+            order = int(q)
+            if code in {10, 11}:   # BWLP, BWHP
+                q = math.sqrt(0.5)  # 1/sqrt(2) ≈ 0.7071, -3 dB at fc
+            else:                   # LRLP, LRHP
+                q = 0.5             # -6 dB at fc (LR crossover convention)
+            q_label = "1/sqrt(2)≈0.7071" if code in {10, 11} else "0.5"
             slope_warnings.append(
-                f"  band at {freq:.1f} Hz: {_CASCADED_FILTER_NAMES[code]} (code {code}) — "
-                f"PEACE cascades multiple biquad filters for this type; "
-                f"mapped to Lo/Hi-pass as a best-effort single-band approximation."
+                f"  band at {freq:.1f} Hz: {_CASCADED_FILTER_NAMES[code]} (code {code}), "
+                f"order={order} → Q set to {q_label}. "
+                f"PEACE cascades multiple biquad stages; single-band approximation."
             )
 
         bands.append(

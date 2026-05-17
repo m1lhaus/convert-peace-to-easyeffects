@@ -1,7 +1,6 @@
 .vscode
 
-*.json
-*.peace
+test/*.json
 
 *_code/
 *_filters/
