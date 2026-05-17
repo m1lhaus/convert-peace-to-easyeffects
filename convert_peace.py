@@ -35,7 +35,7 @@ from pathlib import Path
 #
 # PEACE stores a 0-based integer per band in the [Filters] section that
 # encodes the filter type.  The authoritative source is the $FilterTypes
-# array in Peace.au3 (line 384), which is the PEACE AutoIt source code.
+# array in Peace.au3, which is the PEACE AutoIt source code.
 #
 # Codes and the APO filter string PEACE generates for each:
 #
