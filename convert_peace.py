@@ -47,10 +47,10 @@ from pathlib import Path
 #  5  HS    High Shelf          "ON HS  Fc X Hz Gain Y dB" (no Q; APO default S=0.9)
 #  6  NO    Notch               "ON NO  Fc X Hz Q Z"
 #  7  AP    All-pass            "ON AP  Fc X Hz Q Z"
-#  8  LSC   Lo-shelf slope      "ON LSC S dB Fc X Hz Gain Y dB"
-#                                 [Qualities] stores slope S (dB/oct);
-#                                 APO: effective slope = S/12, isCornerFreq=false
-#  9  HSC   Hi-shelf slope      "ON HSC S dB Fc X Hz Gain Y dB"  (same)
+#  8  LSC   Lo-shelf slope      "ON LSC slope dB Fc X Hz Gain Y dB"
+#                                 [Qualities] stores slope (dB/oct);
+#                                 APO: effective_S = slope/12, isCornerFreq=false
+#  9  HSC   Hi-shelf slope      "ON HSC slope dB Fc X Hz Gain Y dB"  (same)
 # 10  BWLP  Butterworth LP      cascaded LPQ lines — NOT a single biquad
 # 11  BWHP  Butterworth HP      cascaded HPQ lines — NOT a single biquad
 # 12  LRLP  Linkwitz-Riley LP   cascaded LPQ lines — NOT a single biquad
@@ -195,11 +195,10 @@ def parse_peace_file(path: Path) -> tuple[float, list[dict]]:
 
         # For LS/HS (codes 4/5): PEACE never writes Q to the APO config
         # ([Qualities] stores whatever the slider last held, which is
-        # unrelated to the filter's actual response).  EqualizerAPO defaults
-        # to S = 0.9 (S-mode, centre frequency).  EasyEffects APO (DR)
-        # uses biquad Q-mode; the equivalent Q for S = 0.9 is 2/3, which
-        # also matches the value EasyEffects itself uses when importing bare
-        # LS/HS filter lines.  Always override with this value.
+        # unrelated to the filter's actual response).  EqualizerAPO uses
+        # S = 0.9 as default (S-mode, isCornerFreq=false).
+        # EasyEffects hardcodes Q = 2/3 when importing bare LS/HS lines
+        # (confirmed in equalizer_apo.cpp).  We use the same value.
         if code in {4, 5}:
             q = 2.0 / 3.0
 
