@@ -1,8 +1,10 @@
-# convert_peace
+# Convert PEACE to EasyEffects
 
 Converts [PEACE Equalizer](https://sourceforge.net/projects/peace-equalizer-apo-extension/) `.peace` profiles to [EasyEffects](https://github.com/wwmm/easyeffects) JSON presets.
 
-PEACE stores equalizer settings in a Windows INI-style format. On Windows, PEACE feeds these to EqualizerAPO at runtime. This script reads the `.peace` file directly and generates a ready-to-use EasyEffects preset — no Windows or EqualizerAPO required.
+Migrating from Windows to Linux and want to keep using your PEACE EQ settings? This script allows you to convert your existing PEACE profiles to EasyEffects presets without needing to manually recreate them. With just one command you can convert and deploy your custom EQ curves from PEACE Equalizer to EasyEffects. Thanks to LSP, you can even visually compare the frequency response curves in both applications to confirm that the conversion is correct. 
+
+![Visual comparison between PEACE and EasyEffects](screenshot.png)
 
 Supported profile content: **all standard EqualizerAPO filter types** (Bell/Peak, Low/High Shelf, Low/High Pass, Bandpass, Notch, Allpass) and input gain (PreAmp). Per-speaker band assignments are ignored; all bands are applied to both left and right channels, which is the correct behaviour for headphone EQ.
 
@@ -55,7 +57,7 @@ Each `.peace` file produces one `.json` file with the same stem. The preset uses
 
 ### PEACE `[Filters]` code mapping
 
-Filter codes are taken from the `$FilterTypes` array in `Peace.au3` (line 384).
+Filter codes are taken from the `$FilterTypes` array in `Peace.au3`.
 
 | Code | PEACE name | APO filter string written | EasyEffects type | Notes |
 |------|-----------|--------------------------|------------------|-------|
@@ -66,7 +68,7 @@ Filter codes are taken from the `$FilterTypes` array in `Peace.au3` (line 384).
 | 4 | LS | `ON LS Fc Hz Gain dB` | Lo-shelf | No Q; APO defaults to S=0.9; EE Q set to 2/3 |
 | 5 | HS | `ON HS Fc Hz Gain dB` | Hi-shelf | No Q; APO defaults to S=0.9; EE Q set to 2/3 |
 | 6 | NO | `ON NO Fc Hz Q` | Notch | |
-| 7 | AP | `ON AP Fc Hz Q` | All-pass | |
+| 7 | AP | `ON AP Fc Hz Q` | Allpass | |
 | 8 | LSC | `ON LSC S dB Fc Hz Gain dB` | Lo-shelf | `[Qualities]` = slope (dB/oct); EE Q = sqrt(slope/24) |
 | 9 | HSC | `ON HSC S dB Fc Hz Gain dB` | Hi-shelf | `[Qualities]` = slope (dB/oct); EE Q = sqrt(slope/24) |
 | 10 | BWLP | multiple `ON LPQ` lines | Lo-pass | Butterworth LP — cascaded biquads, single-band approx |
@@ -77,3 +79,23 @@ Filter codes are taken from the `$FilterTypes` array in `Peace.au3` (line 384).
 | 15 | HSCQ | `ON HSC Fc Hz Gain dB Q` | Hi-shelf | `[Qualities]` = biquad Q, centre freq |
 | 16 | LSQ | `ON LS Fc Hz Gain dB Q` | Lo-shelf | `[Qualities]` = biquad Q, **corner** freq (APO adjusts to centre internally) |
 | 17 | HSQ | `ON HS Fc Hz Gain dB Q` | Hi-shelf | `[Qualities]` = biquad Q, **corner** freq (APO adjusts to centre internally) |
+
+## Testing
+
+The `test/` directory contains one `.peace` file for each PEACE filter code (codes 0–17) with known, simple settings. Run the converter against them and compare the output JSON visually or by loading the presets in EasyEffects:
+
+```bash
+python3 convert_peace.py test/*.peace --output-dir test/ --verbose
+```
+
+To do a quick side-by-side check of a converted preset:
+
+1. Open PEACE on Windows and load the `.peace` file — note the displayed frequency response curve.
+2. Copy the generated `.json` file into `~/.config/easyeffects/output/` (or the Flatpak equivalent).
+3. Load the preset in EasyEffects and compare the frequency response curve using LSP (Show Native Window button).
+
+For most filter types (Bell, Lo/Hi-pass with Q, Bandpass, Notch, Allpass, Lo/Hi-shelf with Q) the curves should be identical. Filter types that PEACE expands into cascaded biquad stages (Butterworth LP/HP, Linkwitz-Riley LP/HP — codes 10–13) are approximated as a single band, so a small difference in the roll-off region is expected.
+
+## Reporting a wrong conversion
+
+If you find a profile that is not converted correctly, please [open an issue](https://github.com/m1lhaus/convert-peace-to-easyeffects/issues) and include the `.peace` file that produces the wrong result (attach it to the issue).
