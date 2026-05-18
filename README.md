@@ -1,10 +1,10 @@
-# Convert PEACE to EasyEffects
+# Convert PEACE to Easy Effects
 
-Converts [PEACE Equalizer](https://sourceforge.net/projects/peace-equalizer-apo-extension/) `.peace` profiles to [EasyEffects](https://github.com/wwmm/easyeffects) JSON presets.
+Converts [PEACE Equalizer](https://sourceforge.net/projects/peace-equalizer-apo-extension/) `.peace` profiles to [Easy Effects](https://github.com/wwmm/easyeffects) JSON presets.
 
-Migrating from Windows to Linux and want to keep using your PEACE EQ settings? This script allows you to convert your existing PEACE profiles to EasyEffects presets without needing to manually recreate them. With just one command you can convert and deploy your custom EQ curves from PEACE Equalizer to EasyEffects. Thanks to LSP, you can even visually compare the frequency response curves in both applications to confirm that the conversion is correct. 
+Migrating from Windows to Linux and want to keep using your PEACE EQ settings? This script allows you to convert your existing PEACE profiles to Easy Effects presets without needing to manually recreate them. With just one command you can convert and deploy your custom EQ curves from PEACE Equalizer to Easy Effects. Thanks to LSP, you can even visually compare the frequency response curves in both applications to confirm that the conversion is correct. 
 
-![Visual comparison between PEACE and EasyEffects](screenshot.png)
+![Visual comparison between PEACE and Easy Effects](screenshot.png)
 
 Supported profile content: **all standard EqualizerAPO filter types** (Bell/Peak, Low/High Shelf, Low/High Pass, Bandpass, Notch, Allpass) and input gain (PreAmp). Per-speaker band assignments are ignored; all bands are applied to both left and right channels, which is the correct behaviour for headphone EQ.
 
@@ -33,7 +33,7 @@ python3 convert_peace.py FILE.peace [FILE.peace ...]
 # Convert a single profile, output next to the source file
 python3 convert_peace.py _HD660S.peace
 
-# Convert all profiles and deploy directly to EasyEffects (native install)
+# Convert all profiles and deploy directly to Easy Effects (native install)
 python3 convert_peace.py *.peace --output-dir ~/.config/easyeffects/output
 
 # Flatpak install
@@ -44,7 +44,7 @@ python3 convert_peace.py *.peace \
 python3 convert_peace.py *.peace --skip-zero-gain --verbose
 ```
 
-After conversion, EasyEffects will list the new presets in its preset browser immediately — no restart needed.
+After conversion, Easy Effects will list the new presets in its preset browser immediately — no restart needed.
 
 ## Output format
 
@@ -59,7 +59,7 @@ Each `.peace` file produces one `.json` file with the same stem. The preset uses
 
 Filter codes are taken from the `$FilterTypes` array in `Peace.au3`.
 
-| Code | PEACE name | APO filter string written | EasyEffects type | Notes |
+| Code | PEACE name | APO filter string written | Easy Effects type | Notes |
 |------|-----------|--------------------------|------------------|-------|
 | 0 (default) | PK | `ON PK Fc Hz Gain dB Q` | Bell | |
 | 1 | LPQ | `ON LPQ Fc Hz Q` | Lo-pass | |
@@ -82,7 +82,7 @@ Filter codes are taken from the `$FilterTypes` array in `Peace.au3`.
 
 ## Testing
 
-The `test/` directory contains one `.peace` file for each PEACE filter code (codes 0–17) with known, simple settings. Run the converter against them and compare the output JSON visually or by loading the presets in EasyEffects:
+The `test/` directory contains one `.peace` file for each PEACE filter code (codes 0–17) with known, simple settings. Run the converter against them and compare the output JSON visually or by loading the presets in Easy Effects:
 
 ```bash
 python3 convert_peace.py test/*.peace --output-dir test/ --verbose
@@ -92,7 +92,7 @@ To do a quick side-by-side check of a converted preset:
 
 1. Open PEACE on Windows and load the `.peace` file — note the displayed frequency response curve.
 2. Copy the generated `.json` file into `~/.config/easyeffects/output/` (or the Flatpak equivalent).
-3. Load the preset in EasyEffects and compare the frequency response curve using LSP (Show Native Window button).
+3. Load the preset in Easy Effects and compare the frequency response curve using LSP (Show Native Window button).
 
 For most filter types (Bell, Lo/Hi-pass with Q, Bandpass, Notch, Allpass, Lo/Hi-shelf with Q) the curves should be identical. Filter types that PEACE expands into cascaded biquad stages (Butterworth LP/HP, Linkwitz-Riley LP/HP — codes 10–13) are approximated as a single band, so a small difference in the roll-off region is expected.
 
