@@ -31,7 +31,7 @@ python3 convert_peace.py FILE.peace [FILE.peace ...]
 
 ```bash
 # Convert a single profile, output next to the source file
-python3 convert_peace.py _HD660S.peace
+python3 convert_peace.py HD660S.peace
 
 # Convert all profiles and deploy directly to Easy Effects (native install)
 python3 convert_peace.py *.peace --output-dir ~/.config/easyeffects/output
