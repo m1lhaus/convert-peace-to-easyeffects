@@ -33,8 +33,8 @@ python3 convert_peace.py FILE.peace [FILE.peace ...]
 # Convert a single profile, output next to the source file
 python3 convert_peace.py HD660S.peace
 
-# Convert all profiles and deploy directly to Easy Effects (native install)
-python3 convert_peace.py *.peace --output-dir ~/.config/easyeffects/output
+# Convert all profiles and deploy directly to Easy Effects (native install, previously `~/.config/easyeffects/output`)
+python3 convert_peace.py *.peace --output-dir ~/.local/share/easyeffects/output
 
 # Flatpak install
 python3 convert_peace.py *.peace \
@@ -91,7 +91,7 @@ python3 convert_peace.py test/*.peace --output-dir test/ --verbose
 To do a quick side-by-side check of a converted preset:
 
 1. Open PEACE on Windows and load the `.peace` file — note the displayed frequency response curve.
-2. Copy the generated `.json` file into `~/.config/easyeffects/output/` (or the Flatpak equivalent).
+2. Copy the generated `.json` file into `~/.local/share/easyeffects/output/` (or the Flatpak equivalent).
 3. Load the preset in Easy Effects and compare the frequency response curve using LSP (Show Native Window button).
 
 For most filter types (Bell, Lo/Hi-pass with Q, Bandpass, Notch, Allpass, Lo/Hi-shelf with Q) the curves should be identical. Filter types that PEACE expands into cascaded biquad stages (Butterworth LP/HP, Linkwitz-Riley LP/HP — codes 10–13) are approximated as a single band, so a small difference in the roll-off region is expected.

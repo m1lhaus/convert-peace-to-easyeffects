@@ -14,11 +14,12 @@ corresponding EasyEffects "APO (DR)" band types.
 
 Usage:
     python3 convert_peace.py *.peace
-    python3 convert_peace.py *.peace --output-dir ~/.config/easyeffects/output
+    python3 convert_peace.py *.peace --output-dir ~/.local/share/easyeffects/output
     python3 convert_peace.py profile.peace --skip-zero-gain
 
 The generated .json files can be placed directly in:
-  ~/.config/easyeffects/output/     (native package install)
+  ~/.local/share/easyeffects/output     (recent native package install)
+  ~/.config/easyeffects/output/         (previous native package install)
   ~/.var/app/com.github.wwmm.easyeffects/config/easyeffects/output/  (Flatpak)
 """
 
@@ -358,7 +359,8 @@ Examples:
   %(prog)s profile.peace --skip-zero-gain --verbose
 
 After conversion, copy the .json files to one of:
-  ~/.config/easyeffects/output/                                  (native)
+  ~/.local/share/easyeffects/output/      (recent native package install)
+  ~/.config/easyeffects/output/           (previous native package install)
   ~/.var/app/com.github.wwmm.easyeffects/config/easyeffects/output/  (Flatpak)
 """,
     )
